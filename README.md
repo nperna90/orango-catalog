@@ -51,7 +51,10 @@ CREATE TABLE books (
   authors TEXT NOT NULL DEFAULT '',    -- "Name; Name2" (display names, "; "-joined)
   subjects TEXT NOT NULL DEFAULT '',   -- "; "-joined
   bookshelves TEXT NOT NULL DEFAULT '',-- "; "-joined
-  languages TEXT NOT NULL DEFAULT '',  -- comma-joined ISO 639-1 codes
+  languages TEXT NOT NULL DEFAULT '',  -- comma-joined RAW RFC4646 codes as carried by the
+                                       -- dump: mostly ISO 639-1 ("en") but also 639-2/3
+                                       -- ("enm", "grc") -- consumers must exact-match
+                                       -- against the delimited list, never substring
   download_count INTEGER NOT NULL DEFAULT 0,
   media_type TEXT NOT NULL DEFAULT 'Text',  -- "Text" | "Sound"
   epub_url TEXT,
