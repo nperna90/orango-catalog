@@ -114,6 +114,19 @@ def _extract_id(root: ET.Element) -> int | None:
     return int(digits) if digits else None
 
 
+def _extract_rdf_value_list(elements: list[ET.Element]) -> list[str]:
+    """For a list of elements each shaped `<X><rdf:Description><rdf:value>...`
+    (dcterms:subject, pgterms:bookshelf, dcterms:language all share this
+    shape), collect the non-empty rdf:value text from each. Missing/empty
+    values are silently skipped -- never raises on a thin record."""
+    values = []
+    for el in elements:
+        value_el = el.find("rdf:Description/rdf:value", NS)
+        if value_el is not None and value_el.text:
+            values.append(value_el.text.strip())
+    return values
+
+
 def parse_rdf(rdf_bytes: bytes) -> dict[str, Any] | None:
     """Targeted ElementTree walk extracting the v1 DDL fields from one book's
     RDF/XML. Defensive per-field fallback (Assumption A3): a thin/legacy record
@@ -149,26 +162,9 @@ def parse_rdf(rdf_bytes: bytes) -> dict[str, Any] | None:
             authors.append(name_el.text.strip())
     authors_str = "; ".join(authors)
 
-    subjects = []
-    for subj in ebook.findall("dcterms:subject", NS):
-        value_el = subj.find("rdf:Description/rdf:value", NS)
-        if value_el is not None and value_el.text:
-            subjects.append(value_el.text.strip())
-    subjects_str = "; ".join(subjects)
-
-    bookshelves = []
-    for shelf in ebook.findall("pgterms:bookshelf", NS):
-        value_el = shelf.find("rdf:Description/rdf:value", NS)
-        if value_el is not None and value_el.text:
-            bookshelves.append(value_el.text.strip())
-    bookshelves_str = "; ".join(bookshelves)
-
-    languages = []
-    for lang in ebook.findall("dcterms:language", NS):
-        value_el = lang.find("rdf:Description/rdf:value", NS)
-        if value_el is not None and value_el.text:
-            languages.append(value_el.text.strip())
-    languages_str = ",".join(languages)
+    subjects_str = "; ".join(_extract_rdf_value_list(ebook.findall("dcterms:subject", NS)))
+    bookshelves_str = "; ".join(_extract_rdf_value_list(ebook.findall("pgterms:bookshelf", NS)))
+    languages_str = ",".join(_extract_rdf_value_list(ebook.findall("dcterms:language", NS)))
 
     media_type = "Text"
     type_el = ebook.find("dcterms:type", NS)
