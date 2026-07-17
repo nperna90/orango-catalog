@@ -102,7 +102,12 @@ def extract(dump_path: str, work_dir: str) -> None:
     files from `work_dir`. Never stream-parse tar members one at a time while
     still inside the bz2 layer (Pitfall 3 -- serializes two CPU-bound steps)."""
     with tarfile.open(dump_path, "r:bz2") as tar:
-        tar.extractall(work_dir)  # noqa: S202 - trusted PG source, isolated CI runner
+        # filter="data" refuses ../ traversal, absolute paths, links outside the
+        # archive, and device/special members (tar-slip) -- this archive is fetched
+        # fresh from the network every week, in a CI job holding a contents:write
+        # token. Also pins the 3.12+ extraction semantics explicitly (the default
+        # filter changes in Python 3.14).
+        tar.extractall(work_dir, filter="data")
 
 
 def _extract_id(root: ET.Element) -> int | None:
