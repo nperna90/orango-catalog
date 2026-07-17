@@ -90,7 +90,10 @@ def download_dump(url: str, dest: str) -> str | None:
     """Fetch the PG bulk RDF dump to `dest`. Returns the Last-Modified header
     value (used as catalog_meta.pg_dump_date), or None if absent."""
     req = urllib.request.Request(url, headers={"User-Agent": "orango-catalog/1.0"})
-    with urllib.request.urlopen(req) as response:  # noqa: S310 - trusted PG source
+    # timeout=60 is a per-socket-operation stall guard, not a total-transfer cap:
+    # a stalled connection raises instead of hanging the CI runner until GitHub's
+    # 6-hour job kill (the next weekly cron run retries).
+    with urllib.request.urlopen(req, timeout=60) as response:  # noqa: S310 - trusted PG source
         pg_dump_date = response.headers.get("Last-Modified")
         with open(dest, "wb") as f:
             shutil.copyfileobj(response, f)
