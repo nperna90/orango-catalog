@@ -27,7 +27,10 @@ jobs:
         run: python build_catalog.py
 
       - name: Publish to fixed-tag rolling release
-        uses: softprops/action-gh-release@v3
+        # Pinned to a full commit SHA (not the mutable v3 tag): this third-party action
+        # runs with contents:write on the repo every orango install downloads from, so a
+        # retargeted tag must not be able to publish an arbitrary catalog.db.gz.
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: catalog
           name: Catalog (rolling)
