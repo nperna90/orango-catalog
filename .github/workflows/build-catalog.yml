@@ -1,0 +1,50 @@
+name: Build catalog
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'   # Sunday 03:00 UTC — weekly rebuild (D-23.1-02)
+  workflow_dispatch: {}    # manual trigger, e.g. for smoke-testing the release step
+
+jobs:
+  build:
+    runs-on: ubuntu-latest   # public repo: 4-core / 16 GB RAM / 150 GB disk, unlimited free minutes
+    permissions:
+      contents: write        # required so this job can publish/update the Release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest test_build_catalog.py -v
+
+      - name: Build catalog.db.gz
+        run: python build_catalog.py
+
+      - name: Publish to fixed-tag rolling release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: catalog
+          name: Catalog (rolling)
+          body: |
+            Rebuilt automatically every Sunday from Project Gutenberg's official
+            rdf-files.tar.bz2 dump. This is a rolling release — catalog.db.gz is
+            replaced in place on every run, there is no version history.
+
+            App-side download URL:
+            https://github.com/${{ github.repository }}/releases/latest/download/catalog.db.gz
+          files: catalog.db.gz
+        # NOTE (Open Question 1 / Pitfall 2): if softprops/action-gh-release ever errors
+        # on same-tag same-asset-name overwrite (duplicate asset conflict), replace the
+        # step above with the gh CLI fallback, which always clobbers cleanly:
+        #   - name: Publish via gh CLI (fallback)
+        #     env:
+        #       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        #     run: |
+        #       gh release view catalog || gh release create catalog --title "Catalog (rolling)" --notes "Rolling weekly catalog build"
+        #       gh release upload catalog catalog.db.gz --clobber
