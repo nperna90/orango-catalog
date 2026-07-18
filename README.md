@@ -8,7 +8,7 @@ Every Sunday at 03:00 UTC, a scheduled GitHub Action:
 
 1. Downloads Project Gutenberg's official bulk catalog dump (`rdf-files.tar.bz2`, ~75,000 books' worth of RDF/XML metadata).
 2. Extracts the fields orango's Libri Discover screen needs: title, authors, subjects, bookshelves, languages, download counts, and direct file URLs (EPUB, cover image, and — for the ~1,150 public-domain audiobooks Project Gutenberg hosts — MP3/OGG/M4B audio).
-3. Builds ONE compact SQLite database with a full-text search (FTS5) index over title/author/subject/bookshelf.
+3. Builds ONE compact SQLite database with a full-text search (FTS4) index over title/author/subject/bookshelf.
 4. Gzip-compresses it (target: ~15-25 MB) and publishes it to this repo's [Releases](../../releases) page, on a single rolling `catalog` tag.
 
 The result is always available at a stable URL:
@@ -65,10 +65,12 @@ CREATE TABLE books (
 );
 CREATE INDEX idx_books_download_count ON books(download_count DESC);
 
-CREATE VIRTUAL TABLE books_fts USING fts5(
+-- fts4, not fts5: Android framework SQLite ships FTS3/FTS4 only, so the
+-- index must be queryable on-device at minSdk 26.
+CREATE VIRTUAL TABLE books_fts USING fts4(
   title, authors, subjects, bookshelves,
-  content='books', content_rowid='id',
-  tokenize='unicode61 remove_diacritics 2'
+  content="books",
+  tokenize=unicode61 "remove_diacritics=1"
 );
 ```
 

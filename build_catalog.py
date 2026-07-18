@@ -78,10 +78,22 @@ CREATE TABLE books (
   audio_m4b_url TEXT
 );
 CREATE INDEX idx_books_download_count ON books(download_count DESC);
-CREATE VIRTUAL TABLE books_fts USING fts5(
+-- fts4 (not fts5): Android framework SQLite ships FTS3/FTS4 only -- fts5 has
+-- no module on-device (verified against current AOSP external/sqlite
+-- Android.bp: cflags enable FTS3/FTS3_BACKWARDS/FTS4, zero occurrences of
+-- FTS5, on every API level). See 23.1-05 root-cause diagnosis.
+-- content="books": external-content table, keeps the artifact small (index
+-- only, text stays in books). The old FTS5-only content-rowid parameter is
+-- dropped entirely -- fts4 has no such option; books.id IS books' rowid, so
+-- the docid maps automatically.
+-- tokenize=unicode61 "remove_diacritics=1": FTS4 tokenizer arg spelling
+-- (name unquoted, each arg a quoted string) -- a different shape from FTS5's
+-- single quoted-string tokenizer spec. =1 (not =2) for SQLite < 3.27
+-- compatibility on older Android (minSdk 26 / Android 8.0).
+CREATE VIRTUAL TABLE books_fts USING fts4(
   title, authors, subjects, bookshelves,
-  content='books', content_rowid='id',
-  tokenize='unicode61 remove_diacritics 2'
+  content="books",
+  tokenize=unicode61 "remove_diacritics=1"
 );
 """
 

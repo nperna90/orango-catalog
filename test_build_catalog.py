@@ -4,8 +4,10 @@ test_build_catalog.py
 Pytest coverage for build_catalog.py:
 - RDF field extraction from 3 inline fixtures (a Sound/audiobook record, a minimal
   Text-book record, and a malformed/thin legacy record) covering the v1 DDL fields.
-- SQLite (v1 DDL) + FTS5 build behavior: schema_version, row_count, MATCH queries,
-  and diacritic-insensitive search (tokenize='unicode61 remove_diacritics 2').
+- SQLite (v1 DDL) + FTS4 build behavior: schema_version, row_count, MATCH queries,
+  and diacritic-insensitive search (tokenize=unicode61 "remove_diacritics=1").
+  Android framework SQLite ships FTS3/FTS4 only -- no newer FTS module is
+  available on-device (see 23.1-05 root-cause diagnosis).
 
 Fixture provenance: the Sound fixture's shape (namespaces, dcterms:type Sound
 classification, dcterms:hasFormat audio blocks) is abbreviated from the live
@@ -267,7 +269,7 @@ class TestBuildSqlite:
         conn = sqlite3.connect(str(out_path))
         try:
             # Unaccented query "Emile" must match the accented indexed title
-            # "Émile ..." -- proves tokenize='unicode61 remove_diacritics 2'.
+            # "Émile ..." -- proves tokenize=unicode61 "remove_diacritics=1".
             cur = conn.execute("SELECT rowid FROM books_fts WHERE books_fts MATCH 'Emile'")
             rows = [r[0] for r in cur.fetchall()]
             assert rows == [1]
